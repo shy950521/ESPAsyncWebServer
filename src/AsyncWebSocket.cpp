@@ -25,10 +25,7 @@
 
 #ifndef ESP8266
 #include "mbedtls/sha1.h"
-<<<<<<< HEAD
-=======
 #include "mbedtls/version.h"
->>>>>>> esphome/master
 #else
 #include <Hash.h>
 #endif
