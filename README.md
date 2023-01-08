@@ -1,6 +1,8 @@
 # ESPAsyncWebServer (Aircoookie Fork for WLED)
 [![Build Status](https://travis-ci.org/me-no-dev/ESPAsyncWebServer.svg?branch=master)](https://travis-ci.org/me-no-dev/ESPAsyncWebServer) ![](https://github.com/me-no-dev/ESPAsyncWebServer/workflows/ESP%20Async%20Web%20Server%20CI/badge.svg) [![Codacy Badge](https://api.codacy.com/project/badge/Grade/395dd42cfc674e6ca2e326af3af80ffc)](https://www.codacy.com/manual/me-no-dev/ESPAsyncWebServer?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=me-no-dev/ESPAsyncWebServer&amp;utm_campaign=Badge_Grade)
 
+A fork of the [ESPAsyncWebServer](https://github.com/me-no-dev/ESPAsyncWebServer) library by [@me-no-dev](https://github.com/me-no-dev) for [ESPHome](https://esphome.io).
+
 For help and support [![Join the chat at https://gitter.im/me-no-dev/ESPAsyncWebServer](https://badges.gitter.im/me-no-dev/ESPAsyncWebServer.svg)](https://gitter.im/me-no-dev/ESPAsyncWebServer?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 Async HTTP and WebSocket Server for ESP8266 Arduino
@@ -89,6 +91,7 @@ To use this library you might need to have the latest git versions of [ESP32](ht
     - [Setup global and class functions as request handlers](#setup-global-and-class-functions-as-request-handlers)
     - [Methods for controlling websocket connections](#methods-for-controlling-websocket-connections)
     - [Adding Default Headers](#adding-default-headers)
+    - [Path variable](#path-variable)
 
 ## Installation
 
@@ -102,6 +105,7 @@ To use this library you might need to have the latest git versions of [ESP32](ht
    - [Instruction for Espressif 8266](http://docs.platformio.org/en/latest/platforms/espressif8266.html#using-arduino-framework-with-staging-version)
    - [Instruction for Espressif 32](http://docs.platformio.org/en/latest/platforms/espressif32.html#using-arduino-framework-with-staging-version)
  4. Add "ESP Async WebServer" to project using [Project Configuration File `platformio.ini`](http://docs.platformio.org/page/projectconf.html) and [lib_deps](http://docs.platformio.org/page/projectconf/section_env_library.html#lib-deps) option:
+
 ```ini
 [env:myboard]
 platform = espressif...
@@ -522,56 +526,6 @@ response->addHeader("Server","ESP Async Web Server");
 request->send(response);
 ```
 
-### Respond with content coming from a File
-```cpp
-//Send index.htm with default content type
-request->send(SPIFFS, "/index.htm");
-
-//Send index.htm as text
-request->send(SPIFFS, "/index.htm", "text/plain");
-
-//Download index.htm
-request->send(SPIFFS, "/index.htm", String(), true);
-```
-
-### Respond with content coming from a File and extra headers
-```cpp
-//Send index.htm with default content type
-AsyncWebServerResponse *response = request->beginResponse(SPIFFS, "/index.htm");
-
-//Send index.htm as text
-AsyncWebServerResponse *response = request->beginResponse(SPIFFS, "/index.htm", "text/plain");
-
-//Download index.htm
-AsyncWebServerResponse *response = request->beginResponse(SPIFFS, "/index.htm", String(), true);
-
-response->addHeader("Server","ESP Async Web Server");
-request->send(response);
-```
-
-### Respond with content coming from a File containing templates
-Internally uses [Chunked Response](#chunked-response).
-
-Index.htm contents:
-```
-%HELLO_FROM_TEMPLATE%
-```
-
-Somewhere in source files:
-```cpp
-String processor(const String& var)
-{
-  if(var == "HELLO_FROM_TEMPLATE")
-    return F("Hello world!");
-  return String();
-}
-
-// ...
-
-//Send index.htm with template processor function
-request->send(SPIFFS, "/index.htm", String(), false, processor);
-```
-
 ### Respond with content using a callback
 ```cpp
 //send 128 bytes as plain text
@@ -769,41 +723,6 @@ response->setLength();
 request->send(response);
 ```
 
-## Serving static files
-In addition to serving files from SPIFFS as described above, the server provide a dedicated handler that optimize the
-performance of serving files from SPIFFS - ```AsyncStaticWebHandler```. Use ```server.serveStatic()``` function to
-initialize and add a new instance of ```AsyncStaticWebHandler``` to the server.
-The Handler will not handle the request if the file does not exists, e.g. the server will continue to look for another
-handler that can handle the request.
-Notice that you can chain setter functions to setup the handler, or keep a pointer to change it at a later time.
-
-### Serving specific file by name
-```cpp
-// Serve the file "/www/page.htm" when request url is "/page.htm"
-server.serveStatic("/page.htm", SPIFFS, "/www/page.htm");
-```
-
-### Serving files in directory
-To serve files in a directory, the path to the files should specify a directory in SPIFFS and ends with "/".
-```cpp
-// Serve files in directory "/www/" when request url starts with "/"
-// Request to the root or none existing files will try to server the defualt
-// file name "index.htm" if exists
-server.serveStatic("/", SPIFFS, "/www/");
-
-// Server with different default file
-server.serveStatic("/", SPIFFS, "/www/").setDefaultFile("default.html");
-```
-
-### Serving static files with authentication
-
-```cpp
-server
-    .serveStatic("/", SPIFFS, "/www/")
-    .setDefaultFile("default.html")
-    .setAuthentication("user", "pass");
-```
-
 ### Specifying Cache-Control header
 It is possible to specify Cache-Control header value to reduce the number of calls to the server once the client loaded
 the files. For more information on Cache-Control values see [Cache-Control](https://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.9)
@@ -915,20 +834,6 @@ or `false` to exclude it.
 Two filter callback are provided for convince:
 * `ON_STA_FILTER` - return true when requests are made to the STA (station mode) interface.
 * `ON_AP_FILTER` - return true when requests are made to the AP (access point) interface.
-
-### Serve different site files in AP mode
-```cpp
-server.serveStatic("/", SPIFFS, "/www/").setFilter(ON_STA_FILTER);
-server.serveStatic("/", SPIFFS, "/ap/").setFilter(ON_AP_FILTER);
-```
-
-### Rewrite to different index on AP
-```cpp
-// Serve the file "/www/index-ap.htm" in AP, and the file "/www/index.htm" on STA
-server.rewrite("/", "index.htm");
-server.rewrite("/index.htm", "index-ap.htm").setFilter(ON_AP_FILTER);
-server.serveStatic("/", SPIFFS, "/www/");
-```
 
 ### Serving different hosts
 ```cpp
@@ -1356,9 +1261,6 @@ void setup(){
     }
   });
 
-  // attach filesystem root at URL /fs
-  server.serveStatic("/fs", SPIFFS, "/");
-
   // Catch-All Handlers
   // Any request that can not find a Handler that canHandle it
   // ends in the callbacks below.
@@ -1441,9 +1343,6 @@ Example of OTA code
 ```cpp
   // OTA callbacks
   ArduinoOTA.onStart([]() {
-    // Clean SPIFFS
-    SPIFFS.end();
-
     // Disable client connections    
     ws.enable(false);
 
@@ -1483,3 +1382,37 @@ webServer.onNotFound([](AsyncWebServerRequest *request) {
   }
 });
 ```
+
+### Path variable
+
+With path variable you can create a custom regex rule for a specific parameter in a route. 
+For example we want a `sensorId` parameter in a route rule to match only a integer.
+
+```cpp
+  server.on("^\\/sensor\\/([0-9]+)$", HTTP_GET, [] (AsyncWebServerRequest *request) {
+      String sensorId = request->pathArg(0);
+  });
+```
+*NOTE*: All regex patterns starts with `^` and ends with `$`
+
+To enable the `Path variable` support, you have to define the buildflag `-DASYNCWEBSERVER_REGEX`.
+
+
+For Arduino IDE create/update `platform.local.txt`:
+
+`Windows`: C:\Users\(username)\AppData\Local\Arduino15\packages\\`{espxxxx}`\hardware\\`espxxxx`\\`{version}`\platform.local.txt
+
+`Linux`: ~/.arduino15/packages/`{espxxxx}`/hardware/`{espxxxx}`/`{version}`/platform.local.txt
+
+Add/Update the following line:
+```
+  compiler.cpp.extra_flags=-DDASYNCWEBSERVER_REGEX
+```
+
+For platformio modify `platformio.ini`:
+```ini
+[env:myboard]
+build_flags = 
+  -DASYNCWEBSERVER_REGEX
+```
+*NOTE*: By enabling `ASYNCWEBSERVER_REGEX`, `<regex>` will be included. This will add an 100k to your binary.

@@ -19,15 +19,25 @@
   "version": "2.0.7",
   "license": "LGPL-3.0",
   "frameworks": "arduino",
-  "platforms": ["espressif8266", "espressif32"],
+  "platforms": ["espressif8266", "espressif32", "libretuya"],
   "dependencies": [
     {
-      "name": "ESPAsyncTCP",
+      "owner": "ottowinter",
+      "name": "ESPAsyncTCP-esphome",
       "platforms": "espressif8266"
     },
     {
-      "name": "AsyncTCP",
-      "platforms": "espressif32"
+      "owner": "esphome",
+      "name": "AsyncTCP-esphome",
+      "platforms": ["espressif32", "libretuya"]
+    },
+    {
+      "name": "Hash",
+      "platforms": "espressif8266"
+    },
+    {
+      "name": "ESP8266WiFi",
+      "platforms": "espressif8266"
     }
   ]
 }

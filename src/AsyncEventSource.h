@@ -21,12 +21,33 @@
 #define ASYNCEVENTSOURCE_H_
 
 #include <Arduino.h>
-#ifdef ESP32
+#include <Arduino.h>
+#if defined(ESP32) || defined(LIBRETUYA)
 #include <AsyncTCP.h>
 #else
 #include <ESPAsyncTCP.h>
 #endif
+
+#ifndef SSE_MAX_QUEUED_MESSAGES
+#define SSE_MAX_QUEUED_MESSAGES 32
+#endif
+
 #include <ESPAsyncWebServer.h>
+
+#include "AsyncWebSynchronization.h"
+
+#ifdef ESP8266
+#include <Hash.h>
+#ifdef CRYPTO_HASH_h // include Hash.h from espressif framework if the first include was from the crypto library
+#include <../src/Hash.h>
+#endif
+#endif
+
+#if defined(ESP32) || defined(LIBRETUYA)
+#define DEFAULT_MAX_SSE_CLIENTS 8
+#else
+#define DEFAULT_MAX_SSE_CLIENTS 4
+#endif
 
 class AsyncEventSource;
 class AsyncEventSourceResponse;
@@ -35,11 +56,11 @@ typedef std::function<void(AsyncEventSourceClient *client)> ArEventHandlerFuncti
 
 class AsyncEventSourceMessage {
   private:
-    uint8_t * _data; 
+    uint8_t * _data;
     size_t _len;
     size_t _sent;
     //size_t _ack;
-    size_t _acked; 
+    size_t _acked;
   public:
     AsyncEventSourceMessage(const char * data, size_t len);
     ~AsyncEventSourceMessage();
@@ -69,10 +90,11 @@ class AsyncEventSourceClient {
     void send(const char *message, const char *event=NULL, uint32_t id=0, uint32_t reconnect=0);
     bool connected() const { return (_client != NULL) && _client->connected(); }
     uint32_t lastId() const { return _lastId; }
+    size_t  packetsWaiting() const { return _messageQueue.length(); }
 
     //system callbacks (do not call)
     void _onAck(size_t len, uint32_t time);
-    void _onPoll(); 
+    void _onPoll();
     void _onTimeout(uint32_t time);
     void _onDisconnect();
 };
@@ -91,6 +113,7 @@ class AsyncEventSource: public AsyncWebHandler {
     void onConnect(ArEventHandlerFunction cb);
     void send(const char *message, const char *event=NULL, uint32_t id=0, uint32_t reconnect=0);
     size_t count() const; //number clinets connected
+    size_t  avgPacketsWaiting() const;
 
     //system callbacks (do not call)
     void _addClient(AsyncEventSourceClient * client);

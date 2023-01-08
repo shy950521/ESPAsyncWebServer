@@ -22,7 +22,7 @@
 #define ASYNCWEBSOCKET_H_
 
 #include <Arduino.h>
-#ifdef ESP32
+#if defined(ESP32) || defined(LIBRETUYA)
 #include <AsyncTCP.h>
 #define WS_MAX_QUEUED_MESSAGES 32
 #else
@@ -35,9 +35,12 @@
 
 #ifdef ESP8266
 #include <Hash.h>
+#ifdef CRYPTO_HASH_h // include Hash.h from espressif framework if the first include was from the crypto library
+#include <../src/Hash.h>
+#endif
 #endif
 
-#ifdef ESP32
+#if defined(ESP32) || defined(LIBRETUYA)
 #define DEFAULT_MAX_WS_CLIENTS 8
 #else
 #define DEFAULT_MAX_WS_CLIENTS 4
@@ -91,8 +94,8 @@ class AsyncWebSocketMessageBuffer {
     AsyncWebSocketMessageBuffer(const AsyncWebSocketMessageBuffer &); 
     AsyncWebSocketMessageBuffer(AsyncWebSocketMessageBuffer &&); 
     ~AsyncWebSocketMessageBuffer(); 
-    void operator ++(int i) { _count++; }
-    void operator --(int i) {  if (_count > 0) { _count--; } ;  }
+    void operator ++(int i) { (void)i; _count++; }
+    void operator --(int i) { (void)i; if (_count > 0) { _count--; } ;  }
     bool reserve(size_t size);
     void lock() { _lock = true; }
     void unlock() { _lock = false; }
@@ -239,9 +242,11 @@ typedef std::function<void(AsyncWebSocket * server, AsyncWebSocketClient * clien
 
 //WebServer Handler implementation that plays the role of a socket server
 class AsyncWebSocket: public AsyncWebHandler {
+  public:
+    typedef LinkedList<AsyncWebSocketClient *> AsyncWebSocketClientLinkedList;
   private:
     String _url;
-    LinkedList<AsyncWebSocketClient *> _clients;
+    AsyncWebSocketClientLinkedList _clients;
     uint32_t _cNextId;
     AwsEventHandler _eventHandler;
     bool _enabled;
@@ -326,6 +331,8 @@ class AsyncWebSocket: public AsyncWebHandler {
     AsyncWebSocketMessageBuffer * makeBuffer(uint8_t * data, size_t size); 
     LinkedList<AsyncWebSocketMessageBuffer *> _buffers;
     void _cleanBuffers(); 
+
+    AsyncWebSocketClientLinkedList getClients() const;
 };
 
 //WebServer response to authenticate the socket and detach the tcp client from the web server request
