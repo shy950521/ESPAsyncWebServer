@@ -16,11 +16,7 @@
     "type": "git",
     "url": "https://github.com/Aircoookie/ESPAsyncWebServer.git"
   },
-<<<<<<< HEAD
-  "version": "2.0.7",
-=======
-  "version": "1.2.3",
->>>>>>> base/master
+  "version": "2.0.8",
   "license": "LGPL-3.0",
   "frameworks": "arduino",
   "platforms": ["espressif8266", "espressif32"],
